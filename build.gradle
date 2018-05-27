@@ -23,3 +23,28 @@ dependencies {
 
 sourceCompatibility = "${project.'java.version'}" // -source
 targetCompatibility = "${project.'java.version'}" // -target
+
+compileJava {
+  options.encoding = "${project.'default.encoding'}"
+}
+
+compileTestJava {
+  options.encoding = "${project.'default.encoding'}"
+}
+
+eclipse {
+  project {
+    natures "org.springsource.ide.eclipse.gradle.core.nature"
+  }
+
+  classpath {
+    defaultOutputDir = file('build/classes')
+    file.whenMerged { 
+      entries.each { source -> if( source.kind == 'src'
+        && source.toString().contains('output') ) {
+	  source.output = 'build/classes'
+	}
+      }
+    }
+  }
+}
