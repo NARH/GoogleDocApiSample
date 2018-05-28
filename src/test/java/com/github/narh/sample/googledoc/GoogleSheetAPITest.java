@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -51,6 +52,7 @@ import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.SheetsScopes;
+import com.google.api.services.sheets.v4.model.Spreadsheet;
 import com.google.api.services.sheets.v4.model.ValueRange;
 
 import lombok.extern.slf4j.Slf4j;
@@ -75,14 +77,14 @@ public class GoogleSheetAPITest {
    * @return
    * @throws IOException
    */
-  private static Credential getCredentials(final NetHttpTransport HTTP_TRANSPORT) throws IOException {
+  private static Credential getCredentials(final NetHttpTransport HTTP_TRANSPORT, List<String> scopes) throws IOException {
     // Load client secrets.
     InputStream in = GoogleSheetAPITest.class.getClassLoader().getResourceAsStream(CLIENT_SECRET_DIR);
     GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
 
     // Build flow and trigger user authorization request.
     GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
-        HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES)
+        HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, scopes)
           .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(CREDENTIALS_FOLDER)))
           .setAccessType("offline")
           .build();
@@ -99,17 +101,17 @@ public class GoogleSheetAPITest {
    */
   @Test
   public void testReadFromSheetValue() throws Exception {
-    final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-    final String spreadsheetId = "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms";
-    final String range = "Class Data!A2:E";
-
     final List<String> majorList = new ArrayList<>();
     majorList.add("Art");
     majorList.add("English");
     majorList.add("Math");
     majorList.add("Physics");
 
-    Sheets service = new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
+    final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+    final String spreadsheetId = "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms";
+    final String range = "Class Data!A2:E";
+
+    Sheets service = new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT, SCOPES))
       .setApplicationName(APPLICATION_NAME)
       .build();
     ValueRange response = service.spreadsheets().values()
@@ -123,5 +125,37 @@ public class GoogleSheetAPITest {
       log.info("{}\t{}", row.get(0), row.get(4));
       assertThat("major がリストにあること", majorList, hasItem(row.get(4).toString()));
     }
+  }
+
+  /**
+   * 新規のスプレッドシートを作成する
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testCreateSheet() throws Exception {
+    Spreadsheet spreadsheet = new Spreadsheet();
+    /*
+    List<Sheet> sheetData = new ArrayList<>();
+    sheetData.add(new Sheet());
+    sheetData.get(0).set("A1", "Foo");
+    sheetData.get(0).set("B1", "Bar");
+    spreadsheet.setSheets(sheetData);
+    */
+
+    final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+    Sheets sheets = new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT, Arrays.asList(SheetsScopes.DRIVE, SheetsScopes.DRIVE_FILE, SheetsScopes.SPREADSHEETS)))
+      .setApplicationName(APPLICATION_NAME)
+      .build();
+
+   Sheets.Spreadsheets.Create request = sheets.spreadsheets().create(spreadsheet);
+   log.info("request json: {}", request.toString());
+   Spreadsheet response = request.execute();
+   log.info("response json: {}", response.toPrettyString());
+  }
+
+  @Test
+  public void testAppendToSheetValue() throws Exception {
+
   }
 }
