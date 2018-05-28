@@ -10,6 +10,7 @@ plugins {
   id 'idea'
   id 'eclipse'
   id 'jacoco'
+  id 'net.ltgt.apt' version '0.10'
 }
 
 repositories {
@@ -19,6 +20,14 @@ repositories {
 
 dependencies {
   compile "com.google.apis:google-api-services-sheets:${project.'google.api.service.sheet.version'}"
+  compile "com.google.oauth-client:google-oauth-client-jetty:${project.'google.api.service.version'}"
+  compile 'com.google.code.gson:gson:2.8.5'
+  compile 'com.h2database:h2:1.4.197'
+  compile 'ch.qos.logback:logback-classic:1.2.3'
+  compileOnly 'org.projectlombok:lombok:1.16.20'
+  apt('org.projectlombok:lombok:1.16.20')
+
+  testCompile 'junit:junit:4.12'
 }
 
 sourceCompatibility = "${project.'java.version'}" // -source
@@ -39,7 +48,7 @@ eclipse {
 
   classpath {
     defaultOutputDir = file('build/classes')
-    file.whenMerged { 
+    file.whenMerged {
       entries.each { source -> if( source.kind == 'src'
         && source.toString().contains('output') ) {
 	  source.output = 'build/classes'
