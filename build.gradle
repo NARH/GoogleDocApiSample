@@ -19,6 +19,7 @@ repositories {
 }
 
 dependencies {
+  compile "com.google.apis:google-api-services-drive:${project.'google.apis.services.drive.version'}"
   compile "com.google.apis:google-api-services-sheets:${project.'google.api.service.sheet.version'}"
   compile "com.google.oauth-client:google-oauth-client-jetty:${project.'google.api.service.version'}"
   compile 'com.google.code.gson:gson:2.8.5'

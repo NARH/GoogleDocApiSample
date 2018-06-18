@@ -52,7 +52,10 @@ import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.SheetsScopes;
+import com.google.api.services.sheets.v4.model.Sheet;
+import com.google.api.services.sheets.v4.model.SheetProperties;
 import com.google.api.services.sheets.v4.model.Spreadsheet;
+import com.google.api.services.sheets.v4.model.SpreadsheetProperties;
 import com.google.api.services.sheets.v4.model.ValueRange;
 
 import lombok.extern.slf4j.Slf4j;
@@ -117,6 +120,7 @@ public class GoogleSheetAPITest {
     ValueRange response = service.spreadsheets().values()
       .get(spreadsheetId, range)
       .execute();
+    log.info("response json: {}", response.toPrettyString());
 
     List<List<Object>> values = response.getValues();
     assertThat("values が null でないこと", values, not(nullValue()));
@@ -134,28 +138,57 @@ public class GoogleSheetAPITest {
    */
   @Test
   public void testCreateSheet() throws Exception {
+    SpreadsheetProperties properties = new SpreadsheetProperties();
+    properties.setTitle("FooBar");
     Spreadsheet spreadsheet = new Spreadsheet();
+    spreadsheet.setProperties(properties);
+
+    /* worksheet 作成 */
+    final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+    Sheets sheets = new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY,
+        getCredentials(HTTP_TRANSPORT,
+            Arrays.asList(SheetsScopes.DRIVE, SheetsScopes.DRIVE_FILE, SheetsScopes.SPREADSHEETS)))
+                .setApplicationName(APPLICATION_NAME)
+                .build();
+
+    /* worksheet 追加 */
+    SheetProperties sheetProperties = new SheetProperties();
+    sheetProperties.setTitle("FooBar_1");
+    Sheet worksheet = new Sheet();
+    worksheet.setProperties(sheetProperties);
+    List<Sheet> sheetList = new ArrayList<>();
+    sheetList.add(worksheet);
+
+    /* 値の追加 */
     /*
-    List<Sheet> sheetData = new ArrayList<>();
-    sheetData.add(new Sheet());
-    sheetData.get(0).set("A1", "Foo");
-    sheetData.get(0).set("B1", "Bar");
-    spreadsheet.setSheets(sheetData);
+    Object[] data = {"foo","bar"};
+    List<List<Object>> valueList = new ArrayList<>();
+    valueList.add(Arrays.asList(data));
+    ValueRange valueRange = new ValueRange().setValues(valueList).setMajorDimension("ROWS");
+    String range = "FooBar_1!A1";
+    sheets.spreadsheets().values().append(spreadsheet.getSpreadsheetId(), range, valueRange);
     */
 
-    final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-    Sheets sheets = new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT, Arrays.asList(SheetsScopes.DRIVE, SheetsScopes.DRIVE_FILE, SheetsScopes.SPREADSHEETS)))
-      .setApplicationName(APPLICATION_NAME)
-      .build();
-
-   Sheets.Spreadsheets.Create request = sheets.spreadsheets().create(spreadsheet);
-   log.info("request json: {}", request.toString());
-   Spreadsheet response = request.execute();
-   log.info("response json: {}", response.toPrettyString());
+    spreadsheet.setSheets(sheetList);
+    Sheets.Spreadsheets.Create request = sheets.spreadsheets().create(spreadsheet);
+    log.info("request json: {}", request.getJsonContent());
+    Spreadsheet response = request.execute();
+    log.info("response json: {}", response.toPrettyString());
   }
 
   @Test
   public void testAppendToSheetValue() throws Exception {
 
+  }
+
+  // 列番号を列番号文字列に変換する
+  private String bijectiveBase26(int n) {
+    // https://gist.github.com/theazureshadow/4a5a032944f1c9bc0f4a より
+    StringBuilder buf = new StringBuilder();
+    while (n != 0) {
+      buf.append((char) ((n - 1) % 26 + 'A'));
+      n = (n - 1) / 26;
+    }
+    return buf.reverse().toString();
   }
 }
